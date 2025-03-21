@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GetRowIdFunc, GridReadyEvent, IsFullWidthRowParams, RowHeightParams } from 'ag-grid-community';
 import { ExpandCollapseAction, FullWidthCellRenderer } from './full-width-cell-renderer.component';
 import { action$ } from './state';
+import { RowGroup } from './row.group';
 
 
 @Component({
@@ -15,117 +16,15 @@ import { action$ } from './state';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent implements OnInit {
-  sortOrder: 'asc' | 'desc' | '' = '';
-  colId: string = '';
-  colDataType: 'string' | 'number' = 'string';
+export class AppComponent extends RowGroup implements OnInit, OnDestroy {
 
-  dfs(data: any, index: number, changeProp = true) {
-    if (data.children) {
-      data.children.forEach((child: any) => {
-        if (child.isExpanded) {
-          this.dfs(child, index + 1);
-          if (changeProp) {
-            child.isExpanded = false;
-            this.metadata.delete(child);
-          }
-          this.rowData.splice(index + 1, child.children.length);
-        }
-      });
-    }
+  ngOnInit(): void {
+    super.onInit();
   }
-
-  sortByMetadata() {
-    this.metadata.forEach((it) => {
-      if (this.columnDefs[0].field === this.colId) {
-        const groupRecord = it.children[0];
-        if (!groupRecord['groupId']) {
-          return;
-        }
-        this.colId = groupRecord['groupId'];
-        this.colDataType = this.getColDataType(groupRecord['groupId']);
-      }
-      const index = this.rowData.indexOf(it);
-      const sorted = this.sortHelper(it.children.slice());
-      this.rowData.splice(index + 1, 0, ...sorted);
-    });
+  ngOnDestroy(): void {
+    super.onDestroy();
   }
-
-  sortHelper(data: any[]): any {
-    if (this.sortOrder === 'asc') {
-      switch (this.colDataType) {
-        case 'string':
-          return data.sort((a, b) => a[this.colId].localeCompare(b[this.colId]));
-        case 'number':
-          return data.sort((a, b) => a[this.colId] - b[this.colId]);
-        default:
-          return data;
-      }
-    } else if (this.sortOrder === 'desc') {
-      switch (this.colDataType) {
-        case 'string':
-          return data.sort((a, b) => b[this.colId].localeCompare(a[this.colId]));
-        case 'number':
-          return data.sort((a, b) => b[this.colId] - a[this.colId]);
-        default:
-          return data;
-      }
-
-    } else {
-      return data;
-    }
-  }
-  cleanupRowData(data: any[]) {
-    this.metadata.forEach((it) => {
-      if (it.level === 0) {
-        const rowIndex = data.indexOf(it);
-        this.dfs(it, rowIndex, false);
-        data.splice(rowIndex + 1, it.children.length);
-      }
-    });
-  }
-  sortChanged(event: any) {
-    const sortedColumn = event.columnApi.getColumnState().find((col: any) => col.sort);
-    if (!sortedColumn) return;
-    this.setSortInfo(sortedColumn.sort, sortedColumn.colId, this.getColDataType(sortedColumn.colId));
-    this.cleanupRowData(this.rowData);
-    this.rowData = this.sortHelper(this.rowData);
-    this.sortByMetadata();
-    this.grid.api.setRowData(this.rowData);
-  }
-
-  setSortInfo(sortOrder: any, colIndex: string, colDataType: 'string' | 'number') {
-    this.sortOrder = sortOrder;
-    this.colId = colIndex;
-    this.colDataType = colDataType;
-  }
-  metadata = new Set<any>();
-  ngOnInit() {
-    action$.isA(ExpandCollapseAction).subscribe(action => {
-      if (action.data.isExpanded) {
-        this.dfs(action.data, action.rowIndex);
-        this.rowData.splice(action.rowIndex + 1, action.data.children.length);
-        this.metadata.delete(action.data);
-      } else {
-        if (this.columnDefs[0].field === this.colId) {
-          const groupRecord = action.data.children[0];
-          if (groupRecord['groupId']) {
-            this.colId = groupRecord['groupId'];
-            this.colDataType = this.getColDataType(groupRecord['groupId']);
-          }
-        }
-        this.rowData.splice(action.rowIndex + 1, 0, ...this.sortHelper(action.data.children.slice()));
-        this.metadata.add(action.data);
-      }
-      action.data.isExpanded = !action.data.isExpanded;
-      this.grid.api.setRowData(this.rowData);
-    });
-  }
-  getColDataType(colId: string): any {
-    return this.columnDefs.find((it) => it.field === colId)?.cellDataType ?? 'string';
-  }
-  title = 'ag-grid-row-group';
-  columnDefs: ColDef[] = [
+  override columnDefs: ColDef[] = [
     { headerName: 'Group', field: 'country', cellDataType: 'string', comparator: () => 0 },
     { headerName: 'Make', field: 'make', cellDataType: 'string', comparator: () => 0 },
     { headerName: 'Model', field: 'model', cellDataType: 'string', comparator: () => 0 },
@@ -139,7 +38,7 @@ export class AppComponent implements OnInit {
     flex: 1
   };
 
-  rowData = [
+  override rowData = [
     {
       country: 'Japan', groupId: 'country', id: 1,
       make: 'Ford', level: 0, model: 'Mondeo1', price: 32000, children: [
@@ -199,30 +98,6 @@ export class AppComponent implements OnInit {
     },
   ];
 
-  getRowId: GetRowIdFunc = (params: any) => params.data?.id
-  getRowHeight: (params: RowHeightParams) => number | undefined | null = (
-    params: RowHeightParams,
-  ) => {
-    // return 100px height for full width rows
-    if (isFullWidth(params.data)) {
-      return 40;
-    }
-    return 40;
-  };
-  isFullWidthRow: (params: IsFullWidthRowParams) => boolean = (
-    params: IsFullWidthRowParams,
-  ) => {
-    return true;//isFullWidth(params.rowNode.data);
-  };
   fullWidthCellRenderer: any = FullWidthCellRenderer;
-  grid: GridReadyEvent = undefined as any
 
-  onGridReady(params: GridReadyEvent) {
-    this.grid = params;
-  }
-}
-
-function isFullWidth(data: any) {
-  // return true when country is Peru, France or Italy
-  return ['Ford'].indexOf(data.make) >= 0;
 }
