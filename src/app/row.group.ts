@@ -11,11 +11,38 @@ export class RowGroup {
   columnDefs: ColDef[] = []
   rowData: any[] = []
   tearDown$ = new Subject<void>();
-  dfs(data: any, index: number, changeProp = true) {
+  metadata = new Set<any>();
+
+  onInit() {
+    action$.isA(ExpandCollapseAction).pipe(takeUntil(this.tearDown$)).subscribe(action => {
+      if (action.data.isExpanded) {
+        this.lookAround(action.data, action.rowIndex);
+        this.rowData.splice(action.rowIndex + 1, action.data.children.length);
+        this.metadata.delete(action.data);
+      } else {
+        if (this.columnDefs[0].field === this.colId) {
+          const groupRecord = action.data.children[0];
+          if (groupRecord['groupId']) {
+            this.colId = groupRecord['groupId'];
+            this.colDataType = this.getColDataType(groupRecord['groupId']);
+          }
+        }
+        this.rowData.splice(action.rowIndex + 1, 0, ...this.sortHelper(action.data.children.slice()));
+        this.metadata.add(action.data);
+      }
+      action.data.isExpanded = !action.data.isExpanded;
+      this.grid.api.setRowData(this.rowData);
+    });
+  }
+  onDestroy() {
+    this.tearDown$.next();
+    this.tearDown$.complete();
+  }
+  lookAround(data: any, index: number, changeProp = true) {
     if (data.children) {
       data.children.forEach((child: any) => {
         if (child.isExpanded) {
-          this.dfs(child, index + 1);
+          this.lookAround(child, index + 1);
           if (changeProp) {
             child.isExpanded = false;
             this.metadata.delete(child);
@@ -25,7 +52,6 @@ export class RowGroup {
       });
     }
   }
-
   sortByMetadata() {
     this.metadata.forEach((it) => {
       if (this.columnDefs[0].field === this.colId) {
@@ -41,7 +67,6 @@ export class RowGroup {
       this.rowData.splice(index + 1, 0, ...sorted);
     });
   }
-
   sortHelper(data: any[]): any {
     if (this.sortOrder === 'asc') {
       switch (this.colDataType) {
@@ -66,11 +91,11 @@ export class RowGroup {
       return data;
     }
   }
-  cleanupRowData(data: any[]) {
+  reconcileRowData(data: any[]) {
     this.metadata.forEach((it) => {
       if (it.level === 0) {
         const rowIndex = data.indexOf(it);
-        this.dfs(it, rowIndex, false);
+        this.lookAround(it, rowIndex, false);
         data.splice(rowIndex + 1, it.children.length);
       }
     });
@@ -79,42 +104,15 @@ export class RowGroup {
     const sortedColumn = event.columnApi.getColumnState().find((col: any) => col.sort);
     if (!sortedColumn) return;
     this.setSortInfo(sortedColumn.sort, sortedColumn.colId, this.getColDataType(sortedColumn.colId));
-    this.cleanupRowData(this.rowData);
+    this.reconcileRowData(this.rowData);
     this.rowData = this.sortHelper(this.rowData);
     this.sortByMetadata();
     this.grid.api.setRowData(this.rowData);
   }
-
   setSortInfo(sortOrder: any, colIndex: string, colDataType: 'string' | 'number') {
     this.sortOrder = sortOrder;
     this.colId = colIndex;
     this.colDataType = colDataType;
-  }
-  metadata = new Set<any>();
-  onDestroy() {
-    this.tearDown$.next();
-    this.tearDown$.complete();
-  }
-  onInit() {
-    action$.isA(ExpandCollapseAction).pipe(takeUntil(this.tearDown$)).subscribe(action => {
-      if (action.data.isExpanded) {
-        this.dfs(action.data, action.rowIndex);
-        this.rowData.splice(action.rowIndex + 1, action.data.children.length);
-        this.metadata.delete(action.data);
-      } else {
-        if (this.columnDefs[0].field === this.colId) {
-          const groupRecord = action.data.children[0];
-          if (groupRecord['groupId']) {
-            this.colId = groupRecord['groupId'];
-            this.colDataType = this.getColDataType(groupRecord['groupId']);
-          }
-        }
-        this.rowData.splice(action.rowIndex + 1, 0, ...this.sortHelper(action.data.children.slice()));
-        this.metadata.add(action.data);
-      }
-      action.data.isExpanded = !action.data.isExpanded;
-      this.grid.api.setRowData(this.rowData);
-    });
   }
   getColDataType(colId: string): any {
     return this.columnDefs.find((it) => it.field === colId)?.cellDataType ?? 'string';

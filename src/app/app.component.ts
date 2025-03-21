@@ -1,9 +1,8 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
-import { ColDef, GetRowIdFunc, GridReadyEvent, IsFullWidthRowParams, RowHeightParams } from 'ag-grid-community';
-import { ExpandCollapseAction, FullWidthCellRenderer } from './full-width-cell-renderer.component';
-import { action$ } from './state';
+import { ColDef } from 'ag-grid-community';
+import { FullWidthCellRenderer } from './full-width-cell-renderer.component';
 import { RowGroup } from './row.group';
 
 
@@ -35,6 +34,7 @@ export class AppComponent extends RowGroup implements OnInit, OnDestroy {
   defaultColDef = {
     sortable: true,
     filter: false,
+    resizable: true,
     flex: 1
   };
 
@@ -97,6 +97,14 @@ export class AppComponent extends RowGroup implements OnInit, OnDestroy {
       ], isExpanded: false
     },
   ];
+
+  //(columnResized)="onColumnResized($event)"
+  /*onColumnResized(event: any) {
+    if (event.finished) {
+      event.api.refreshCells({ force: true });
+      this.grid.api.redrawRows();
+    }
+  }*/
 
   fullWidthCellRenderer: any = FullWidthCellRenderer;
 
