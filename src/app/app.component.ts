@@ -36,6 +36,7 @@ export class AppComponent extends RowGroup implements OnInit, OnDestroy {
     sortable: true,
     filter: false,
     resizable: true,
+    suppressMovable: true,
     flex: 1
   };
 

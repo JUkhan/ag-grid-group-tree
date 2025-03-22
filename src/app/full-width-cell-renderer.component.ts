@@ -25,7 +25,7 @@ import { NgStyle } from '@angular/common';
             </div>
         } @else {
           @for (vpc of vpCols; track vpc.colId;let idx = $index) {
-            <div class="pl-5 mb-1" [style.width.px]="colsWidth()[vpCols[0].colId]">{{ idx>0? data[vpc.colId]:'' }}</div>
+            <div class="pl-5 mb-1" [style.width.px]="colsWidth()[vpc.colId]">{{ idx>0? data[vpc.colId]:'' }}</div>
           }  
         }
         </div>
@@ -64,7 +64,6 @@ export class FullWidthCellRenderer implements ICellRendererAngularComp {
   };
 
   refresh(params: ICellRendererParams): boolean {
-    this.data = params.data;
     return false;
   }
 
