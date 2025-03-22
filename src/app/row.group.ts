@@ -13,6 +13,7 @@ export class RowGroup {
   tearDown$ = new Subject<void>();
   metadata = new Set<any>();
   private _colId: string = '';
+  private _rawData: any[] = [];
   onInit() {
     action$.isA(ExpandCollapseAction).pipe(takeUntil(this.tearDown$)).subscribe(action => {
       if (action.data.isExpanded) {
@@ -31,6 +32,10 @@ export class RowGroup {
   onDestroy() {
     this.tearDown$.next();
     this.tearDown$.complete();
+  }
+  setRawDataAndGroupNames(data: any[], groups: string[]) {
+    this._rawData = data;
+    this.rowData = makeGroups(data, groups);
   }
   setColIdAndDataType(data: any) {
     if (data.children.length > 0 && data.children[0].groupId) {

@@ -17,16 +17,16 @@ import { NgStyle } from '@angular/common';
   template: `
         <div class="flex hover:bg-blue-50 h-full items-center">
         @if (data.children) {
-            <div class="pl-5 mb-1" [style.width.px]="countryWidth()">
+            <div class="pl-5 mb-1" [style.width.px]="colsWidth()[vpCols[0].colId]">
                 <span (click)="expandCollapse()" class="font-bold pr-1 cursor-pointer hover:text-red-600" [ngStyle]="{'margin-left': (data.level||0) * 20 + 'px'}">
                   {{ data.isExpanded ? '⮟' : '⮞' }}
               </span>
                   {{ data[data.groupId] }} ({{ data.children.length }})
             </div>
         } @else {
-            <div class="pl-5 mb-1" [style.width.px]="countryWidth()"></div>
-            <div class="pl-5 mb-1" [style.width.px]="makeWidth()">{{ data.make }}</div>
-            <div class="pl-5 mb-1" [style.width.px]="priceWidth()">{{ data.price }}</div>
+          @for (vpc of vpCols; track vpc.colId;let idx = $index) {
+            <div class="pl-5 mb-1" [style.width.px]="colsWidth()[vpCols[0].colId]">{{ idx>0? data[vpc.colId]:'' }}</div>
+          }  
         }
         </div>
     `,
@@ -37,36 +37,35 @@ export class FullWidthCellRenderer implements ICellRendererAngularComp {
   countryWidth = signal(0);
   makeWidth = signal(0);
   priceWidth = signal(0);
+  colsWidth = signal<Record<string, number>>({});
+  vpCols: any[] = [];
   agInit(params: ICellRendererParams): void {
     this.params = params;
-    const cols = params.columnApi.getColumns()!;
-    this.countryWidth.set((cols[0] as any).actualWidth);
-    this.makeWidth.set((cols[1] as any).actualWidth);
-    this.priceWidth.set((cols[3] as any).actualWidth);
-    cols[0].addEventListener('widthChanged', this.onCountryWidthChanged);
-    cols[1].addEventListener('widthChanged', this.onMakeWidthChanged);
-    cols[3].addEventListener('widthChanged', this.onPriceWidthChanged);
-    this.refresh(params);
+    this.data = params.data;
+    //@ts-ignore
+    this.vpCols = params.columnApi.columnModel.viewportColumns;
+    const withObj: any = {};
+    this.vpCols.forEach((col: any) => {
+      withObj[col.colId] = col.actualWidth;
+      col.addEventListener('widthChanged', this.onColumnWidthChanged);
+    });
+    this.colsWidth.set(withObj);
   }
   ngOnDestroy(): void {
-    const cols = this.params.columnApi.getColumns()!;
-    cols[0].removeEventListener('widthChanged', this.onCountryWidthChanged);
-    cols[1].removeEventListener('widthChanged', this.onMakeWidthChanged);
-    cols[3].removeEventListener('widthChanged', this.onPriceWidthChanged);
+    this.vpCols.forEach((col: any) => {
+      col.removeEventListener('widthChanged', this.onColumnWidthChanged);
+    });
   }
-  onCountryWidthChanged = (event: any) => {
-    this.countryWidth.set(event.column.actualWidth);
-  };
-  onMakeWidthChanged = (event: any) => {
-    this.makeWidth.set(event.column.actualWidth);
+  onColumnWidthChanged = (event: any) => {
+    this.colsWidth.update((prev: Record<string, number>) => ({
+      ...prev,
+      [event.column.colId]: event.column.actualWidth
+    }));
   };
 
-  onPriceWidthChanged = (event: any) => {
-    this.priceWidth.set(event.column.actualWidth);
-  };
   refresh(params: ICellRendererParams): boolean {
     this.data = params.data;
-    return true;
+    return false;
   }
 
   expandCollapse() {

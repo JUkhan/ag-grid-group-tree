@@ -3,7 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
 import { ColDef } from 'ag-grid-community';
 import { FullWidthCellRenderer } from './full-width-cell-renderer.component';
-import { makeGroups, RowGroup } from './row.group';
+import { RowGroup } from './row.group';
 
 
 @Component({
@@ -19,7 +19,7 @@ export class AppComponent extends RowGroup implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     super.onInit();
-    this.rowData = makeGroups(this.rawData, ['country', 'model', 'year']);
+    this.setRawDataAndGroupNames(this.rawData, ['country', 'model', 'year']);
   }
   ngOnDestroy(): void {
     super.onDestroy();
