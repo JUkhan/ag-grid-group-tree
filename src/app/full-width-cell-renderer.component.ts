@@ -15,21 +15,21 @@ import { NgStyle } from '@angular/common';
     
     `],
   template: `
-        <div class="flex">
-            <div class="mt-2 pl-5 w-40" [style.width.px]="countryWidth()">
+        <div class="flex hover:bg-blue-50 h-full items-center">
+            <div class="pl-5 mb-1" [style.width.px]="countryWidth()">
               @if (data.children) {
-                <button (click)="expandCollapse()" class="font-bold pr-2 hover:text-red-600" [ngStyle]="{'padding-left': (data.level||0) * 20 + 'px'}">
+                <span (click)="expandCollapse()" class="font-bold pr-1 cursor-pointer hover:text-red-600" [ngStyle]="{'margin-left': (data.level||0) * 20 + 'px'}">
                   {{ data.isExpanded ? '⮟' : '⮞' }}
-                  </button>
+              </span>
                   {{ data[data.groupId] }} ({{ data.children.length }})
               }@else {
                 {{ data[this.firstColId] }}
               }
                
             </div>
-            <div class="pl-5 mt-2" [style.width.px]="makeWidth()">{{ data.make }}</div>
-            <div class="pl-5 mt-2" [style.width.px]="modelWidth()">{{ data.model }}</div>
-            <div class="pl-5 mt-2" [style.width.px]="priceWidth()">{{ data.price }}</div>
+            <div class="pl-5 mb-1" [style.width.px]="makeWidth()">{{ data.make }}</div>
+            <div class="pl-5 mb-1" [style.width.px]="modelWidth()">{{ data.model }}</div>
+            <div class="pl-5 mb-1" [style.width.px]="priceWidth()">{{ data.price }}</div>
             
         </div>
     `,
