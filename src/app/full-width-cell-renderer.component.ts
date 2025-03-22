@@ -16,43 +16,35 @@ import { NgStyle } from '@angular/common';
     `],
   template: `
         <div class="flex hover:bg-blue-50 h-full items-center">
+        @if (data.children) {
             <div class="pl-5 mb-1" [style.width.px]="countryWidth()">
-              @if (data.children) {
                 <span (click)="expandCollapse()" class="font-bold pr-1 cursor-pointer hover:text-red-600" [ngStyle]="{'margin-left': (data.level||0) * 20 + 'px'}">
                   {{ data.isExpanded ? '⮟' : '⮞' }}
               </span>
                   {{ data[data.groupId] }} ({{ data.children.length }})
-              }@else {
-                {{ data[this.firstColId] }}
-              }
-               
             </div>
+        } @else {
+            <div class="pl-5 mb-1" [style.width.px]="countryWidth()"></div>
             <div class="pl-5 mb-1" [style.width.px]="makeWidth()">{{ data.make }}</div>
-            <div class="pl-5 mb-1" [style.width.px]="modelWidth()">{{ data.model }}</div>
             <div class="pl-5 mb-1" [style.width.px]="priceWidth()">{{ data.price }}</div>
-            
+        }
         </div>
     `,
 })
 export class FullWidthCellRenderer implements ICellRendererAngularComp {
   data: any = {};
   params: ICellRendererParams = undefined as any;
-  firstColId = '';
   countryWidth = signal(0);
   makeWidth = signal(0);
-  modelWidth = signal(0);
   priceWidth = signal(0);
   agInit(params: ICellRendererParams): void {
     this.params = params;
     const cols = params.columnApi.getColumns()!;
-    this.firstColId = cols[0].getColId();
     this.countryWidth.set((cols[0] as any).actualWidth);
     this.makeWidth.set((cols[1] as any).actualWidth);
-    this.modelWidth.set((cols[2] as any).actualWidth);
     this.priceWidth.set((cols[3] as any).actualWidth);
     cols[0].addEventListener('widthChanged', this.onCountryWidthChanged);
     cols[1].addEventListener('widthChanged', this.onMakeWidthChanged);
-    cols[2].addEventListener('widthChanged', this.onModeWidthChanged);
     cols[3].addEventListener('widthChanged', this.onPriceWidthChanged);
     this.refresh(params);
   }
@@ -60,7 +52,6 @@ export class FullWidthCellRenderer implements ICellRendererAngularComp {
     const cols = this.params.columnApi.getColumns()!;
     cols[0].removeEventListener('widthChanged', this.onCountryWidthChanged);
     cols[1].removeEventListener('widthChanged', this.onMakeWidthChanged);
-    cols[2].removeEventListener('widthChanged', this.onModeWidthChanged);
     cols[3].removeEventListener('widthChanged', this.onPriceWidthChanged);
   }
   onCountryWidthChanged = (event: any) => {
@@ -69,9 +60,7 @@ export class FullWidthCellRenderer implements ICellRendererAngularComp {
   onMakeWidthChanged = (event: any) => {
     this.makeWidth.set(event.column.actualWidth);
   };
-  onModeWidthChanged = (event: any) => {
-    this.modelWidth.set(event.column.actualWidth);
-  };
+
   onPriceWidthChanged = (event: any) => {
     this.priceWidth.set(event.column.actualWidth);
   };

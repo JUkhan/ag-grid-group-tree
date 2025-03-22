@@ -12,7 +12,7 @@ export class RowGroup {
   rowData: any[] = []
   tearDown$ = new Subject<void>();
   metadata = new Set<any>();
-
+  private _colId: string = '';
   onInit() {
     action$.isA(ExpandCollapseAction).pipe(takeUntil(this.tearDown$)).subscribe(action => {
       if (action.data.isExpanded) {
@@ -20,13 +20,7 @@ export class RowGroup {
         this.rowData.splice(action.rowIndex + 1, action.data.children.length);
         this.metadata.delete(action.data);
       } else {
-        if (this.columnDefs[0].field === this.colId) {
-          const groupRecord = action.data.children[0];
-          if (groupRecord['groupId']) {
-            this.colId = groupRecord['groupId'];
-            this.colDataType = this.getColDataType(groupRecord['groupId']);
-          }
-        }
+        this.setColIdAndDataType(action.data);
         this.rowData.splice(action.rowIndex + 1, 0, ...this.sortHelper(action.data.children.slice()));
         this.metadata.add(action.data);
       }
@@ -38,11 +32,19 @@ export class RowGroup {
     this.tearDown$.next();
     this.tearDown$.complete();
   }
+  setColIdAndDataType(data: any) {
+    if (data.children.length > 0 && data.children[0].groupId) {
+      this.colId = data.children[0].groupId;
+    } else {
+      this.colId = this._colId;
+    }
+    this.colDataType = this.getColDataType(this.colId);
+  }
   lookAround(data: any, index: number, changeProp = true) {
     if (data.children) {
       data.children.forEach((child: any) => {
         if (child.isExpanded) {
-          this.lookAround(child, index + 1);
+          this.lookAround(child, index + 1, changeProp);
           if (changeProp) {
             child.isExpanded = false;
             this.metadata.delete(child);
@@ -54,24 +56,15 @@ export class RowGroup {
   }
   sortByMetadata() {
     this.metadata.forEach((it) => {
-      if (this.columnDefs[0].field === this.colId) {
-        const groupRecord = it.children[0];
-        if (!groupRecord['groupId']) {
-          return;
-        }
-        this.colId = groupRecord['groupId'];
-        this.colDataType = this.getColDataType(groupRecord['groupId']);
-      }
-      const index = this.rowData.indexOf(it);
-      const sorted = this.sortHelper(it.children.slice());
-      this.rowData.splice(index + 1, 0, ...sorted);
+      this.setColIdAndDataType(it);
+      this.rowData.splice(this.rowData.indexOf(it) + 1, 0, ...this.sortHelper(it.children.slice()));
     });
   }
   sortHelper(data: any[]): any {
     if (this.sortOrder === 'asc') {
       switch (this.colDataType) {
         case 'string':
-          return data.sort((a, b) => a[this.colId].localeCompare(b[this.colId]));
+          return data.sort((a, b) => a[this.colId]?.localeCompare(b[this.colId]) ?? 0);
         case 'number':
           return data.sort((a, b) => a[this.colId] - b[this.colId]);
         default:
@@ -80,7 +73,7 @@ export class RowGroup {
     } else if (this.sortOrder === 'desc') {
       switch (this.colDataType) {
         case 'string':
-          return data.sort((a, b) => b[this.colId].localeCompare(a[this.colId]));
+          return data.sort((a, b) => b[this.colId]?.localeCompare(a[this.colId]) ?? 0);
         case 'number':
           return data.sort((a, b) => b[this.colId] - a[this.colId]);
         default:
@@ -103,6 +96,7 @@ export class RowGroup {
   sortChanged(event: any) {
     const sortedColumn = event.columnApi.getColumnState().find((col: any) => col.sort);
     if (!sortedColumn) return;
+    this._colId = sortedColumn.colId;
     this.setSortInfo(sortedColumn.sort, sortedColumn.colId, this.getColDataType(sortedColumn.colId));
     this.reconcileRowData(this.rowData);
     this.rowData = this.sortHelper(this.rowData);
@@ -130,4 +124,35 @@ export class RowGroup {
   onGridReady(params: GridReadyEvent) {
     this.grid = params;
   }
+
+}
+
+export function makeGroups(rawData: any[], rawGroups: string[]): any[] {
+  function groupData(data: any[], groups: string[]): any[] {
+    if (groups.length === 0) return data;
+
+    const [groupBy, ...remainingGroups] = groups;
+
+    const grouped = data.reduce((acc, item) => {
+      const key = item[groupBy];
+      if (!acc[key]) {
+        acc[key] = {
+          id: Math.random().toString(),
+          [groupBy]: key,
+          groupId: groupBy,
+          level: rawGroups.indexOf(groupBy),
+          isExpanded: false,
+          children: []
+        };
+      }
+      acc[key].children.push(item);
+      return acc;
+    }, {});
+
+    return Object.values(grouped).map((group: any) => ({
+      ...group,
+      children: groupData(group.children, remainingGroups)
+    }));
+  }
+  return groupData(rawData, rawGroups);
 }
