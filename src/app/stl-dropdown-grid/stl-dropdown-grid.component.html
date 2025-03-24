@@ -1,0 +1,30 @@
+<div class="flex">
+  <mat-form-field class="flex-auto" appearance="fill">
+    <mat-label>Select</mat-label>
+    <mat-select
+      panelClass="mat-select-panel"
+      multiple
+      (opened)="onOpened($event)"
+    >
+      <mat-select-trigger>
+        @for (item of selected(); track item) {
+        <mat-chip>{{ item }}</mat-chip>
+        }
+      </mat-select-trigger>
+      <mat-option value="x" style="display: none">Option</mat-option>
+      <ag-grid-angular
+        style="width: 100%; height: 400px"
+        class="ag-theme-alpine"
+        rowModelType="clientSide"
+        (sortChanged)="sortChanged($event)"
+        [rowData]="rowData"
+        (gridReady)="onGridReady($event)"
+        [columnDefs]="columnDefs"
+        [defaultColDef]="defaultColDef"
+        [getRowHeight]="getRowHeight"
+        [isFullWidthRow]="isFullWidthRow"
+        [fullWidthCellRenderer]="fullWidthCellRenderer"
+      ></ag-grid-angular>
+    </mat-select>
+  </mat-form-field>
+</div>

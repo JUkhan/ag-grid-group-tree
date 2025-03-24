@@ -1,30 +1,40 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, signal, ViewChild } from '@angular/core';
+import { MatFormField, MatOption, MatSelect, MatSelectChange, MatSelectModule } from '@angular/material/select';
+import { RowGroup } from '../row.group';
 import { AgGridModule } from 'ag-grid-angular';
+import { FullWidthCellRenderer } from '../full-width-cell-renderer.component';
 import { ColDef } from 'ag-grid-community';
-import { FullWidthCellRenderer } from './full-width-cell-renderer.component';
-import { RowGroup } from './row.group';
-import { StlDropdownGridComponent } from "./stl-dropdown-grid/stl-dropdown-grid.component";
+import { MatChip } from '@angular/material/chips';
 
 @Component({
-  selector: 'app-root',
-  imports: [
-    RouterOutlet,
-    AgGridModule,
-    StlDropdownGridComponent
-  ],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  selector: 'stl-dropdown-grid',
+  imports: [MatSelectModule, MatFormField, AgGridModule, MatChip],
+  templateUrl: './stl-dropdown-grid.component.html',
+  styleUrl: './stl-dropdown-grid.component.scss'
 })
-export class AppComponent extends RowGroup implements OnInit, OnDestroy {
-
+export class StlDropdownGridComponent extends RowGroup {
+  @ViewChild(MatSelect) matSelect: MatSelect = null as any;
+  private option: MatOption = null as any;
   ngOnInit(): void {
     super.onInit();
-    this.setRawDataAndGroupNames(this.rawData, ['country', 'model', 'year']);
+  }
+  ngAfterViewInit(): void {
+    if (!this.option) {
+      this.option = this.matSelect.options.find(
+        (opt) => opt.value === 'x'
+      )!;
+    }
   }
   ngOnDestroy(): void {
     super.onDestroy();
   }
+
+  onOpened(event: any) {
+    this.setRawDataAndGroupNames(this.rawData, ['country', 'model', 'year']);
+    this.selected.set(['country', 'model', 'year']);
+    this.option._getHostElement().click();
+  }
+  selected = signal<string[]>([]);
   override columnDefs: ColDef[] = [
     { headerName: 'Group', field: 'country', cellDataType: 'string', comparator: () => 0 },
     { headerName: 'Make', field: 'make', cellDataType: 'string', comparator: () => 0 },
@@ -67,15 +77,5 @@ export class AppComponent extends RowGroup implements OnInit, OnDestroy {
     { id: 21, country: 'Bangladesh', make: 'Ford', model: 'Lemborg', price: 21, year: 2022 },
   ]
 
-  //(columnResized)="onColumnResized($event)"
-  /*onColumnResized(event: any) {
-    if (event.finished) {
-      event.api.refreshCells({ force: true });
-      this.grid.api.redrawRows();
-    }
-  }*/
-
   fullWidthCellRenderer: any = FullWidthCellRenderer;
-
 }
-

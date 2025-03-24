@@ -1,0 +1,15 @@
+::ng-deep .mat-option:first-child .mat-pseudo-checkbox {
+  // hide multiple selection checkbox on top
+  display: none;
+}
+
+::ng-deep .mat-select-panel.panel-custom-width {
+  margin-top: 0px !important;
+  overflow: hidden !important;
+  margin-left: 0px !important;
+}
+
+.stl-slide-tree-box {
+  min-width: calc(100%) !important;
+  height: 0px !important;
+}

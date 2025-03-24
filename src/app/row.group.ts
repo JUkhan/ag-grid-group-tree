@@ -16,6 +16,7 @@ export class RowGroup {
   private _rawData: any[] = [];
   onInit() {
     action$.isA(ExpandCollapseAction).pipe(takeUntil(this.tearDown$)).subscribe(action => {
+      if (this.rowData[action.rowIndex] !== action.data) return;
       if (action.data.isExpanded) {
         this.lookAround(action.data, action.rowIndex);
         this.rowData.splice(action.rowIndex + 1, action.data.children.length);
