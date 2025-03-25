@@ -1,15 +1,18 @@
 <div class="flex">
   <mat-form-field class="flex-auto" appearance="fill">
-    <mat-label>Select</mat-label>
+    <mat-label>{{ label() }}</mat-label>
     <mat-select
       panelClass="mat-select-panel"
+      [formControl]="selectedMessage"
       multiple
-      (opened)="onOpened($event)"
+      (opened)="onOpened()"
     >
       <mat-select-trigger>
-        @for (item of selected(); track item) {
-        <mat-chip>{{ item }}</mat-chip>
-        }
+        <div class="flex flex-wrap">
+          @for (item of split(selectedMessage.value); track $index) {
+          <mat-chip class="m-1">{{ item }}</mat-chip>
+          }
+        </div>
       </mat-select-trigger>
       <mat-option value="x" style="display: none">Option</mat-option>
       <ag-grid-angular

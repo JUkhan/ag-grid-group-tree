@@ -20,11 +20,15 @@ export class AppComponent extends RowGroup implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     super.onInit();
-    this.setRawDataAndGroupNames(this.rawData, ['country', 'model', 'year']);
+    this.setOptions(this.rawData, ['country', 'model', 'year'], true, true);
   }
   ngOnDestroy(): void {
     super.onDestroy();
   }
+  onSelected(selected: any[]) {
+    console.log(selected);
+  }
+  selectedNodeText = (item: any) => ` ${item.country} ${item.model} ${item.year} ${item.make} ${item.price}`;
   override columnDefs: ColDef[] = [
     { headerName: 'Group', field: 'country', cellDataType: 'string', comparator: () => 0 },
     { headerName: 'Make', field: 'make', cellDataType: 'string', comparator: () => 0 },
@@ -40,7 +44,17 @@ export class AppComponent extends RowGroup implements OnInit, OnDestroy {
     suppressMovable: true,
     flex: 1
   };
-
+  groupNames = ['country', 'model', 'year'];
+  rawData2 = [{ id: 1, country: 'Japan', make: 'Ford', model: 'Mondeo', price: 3200, year: 2020 },
+  { id: 2, country: 'Japan', make: 'Ford', model: 'Mondeo', price: 320, year: 2021 },
+  { id: 3, country: 'Japan', make: 'Ford', model: 'Mondeo', price: 32, year: 2022 },
+  { id: 4, country: 'Japan', make: 'Ford', model: 'Tesla', price: 3200, year: 2020 },
+  { id: 5, country: 'Japan', make: 'Ford', model: 'Tesla', price: 320, year: 2021 },
+  { id: 6, country: 'Japan', make: 'Ford', model: 'Tesla', price: 32, year: 2022 },
+  { id: 7, country: 'Japan', make: 'Ford2', model: 'Tesla', price: 13200, year: 2020 },
+  { id: 8, country: 'Japan', make: 'Ford2', model: 'Tesla', price: 1320, year: 2021 },
+  { id: 9, country: 'Japan', make: 'Ford2', model: 'Tesla', price: 145332, year: 2022 },
+  ];
   rawData = [
     { id: 1, country: 'Japan', make: 'Ford', model: 'Mondeo', price: 3200, year: 2020 },
     { id: 2, country: 'Japan', make: 'Ford', model: 'Mondeo', price: 320, year: 2021 },

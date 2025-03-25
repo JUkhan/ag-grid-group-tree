@@ -1,8 +1,9 @@
 import { ColDef, GetRowIdFunc, GridReadyEvent, IsFullWidthRowParams, RowHeightParams } from "ag-grid-community";
-import { ExpandCollapseAction } from "./full-width-cell-renderer.component";
+import { ExpandCollapseAction, RowSelectAction } from "./full-width-cell-renderer.component";
 import { action$ } from "./state";
 import { Subject } from "rxjs/internal/Subject";
 import { takeUntil } from "rxjs/operators";
+import { EventEmitter } from "@angular/core";
 
 export class RowGroup {
   sortOrder: 'asc' | 'desc' | '' = '';
@@ -12,8 +13,11 @@ export class RowGroup {
   rowData: any[] = []
   tearDown$ = new Subject<void>();
   metadata = new Set<any>();
+  selectedItemsEventEmitter = new EventEmitter<any[]>();
   private _colId: string = '';
   private _rawData: any[] = [];
+  private _singleSelection: boolean = false;
+  private _multiSelection: boolean = false;
   onInit() {
     action$.isA(ExpandCollapseAction).pipe(takeUntil(this.tearDown$)).subscribe(action => {
       if (this.rowData[action.rowIndex] !== action.data) return;
@@ -29,14 +33,41 @@ export class RowGroup {
       action.data.isExpanded = !action.data.isExpanded;
       this.grid.api.setRowData(this.rowData);
     });
+    action$.isA(RowSelectAction).pipe(takeUntil(this.tearDown$)).subscribe(action => {
+      if (this.rowData[action.rowIndex] !== action.data) return;
+      action.data._isChecked = action.isChecked;
+      if (this._multiSelection) {
+        this.fetchAllChildren(action.data, action.isChecked);
+      } else {
+        this._rawData.forEach(it => it._isChecked = false);
+        action.data._isChecked = action.isChecked;
+      }
+      this.fetchAllChildren(action.data, action.isChecked);
+      this.grid.api.setRowData(this.rowData);
+      this.selectedItemsEventEmitter.emit(this.getSelectedItems());
+    });
+  }
+  getSelectedItems() {
+    return this._rawData.filter((it) => it._isChecked);
+  }
+  private fetchAllChildren(data: any, isChecked: boolean) {
+    if (data.children) {
+      data.children.forEach((child: any) => {
+        this.fetchAllChildren(child, isChecked);
+        child._isChecked = isChecked;
+      });
+    }
   }
   onDestroy() {
     this.tearDown$.next();
     this.tearDown$.complete();
   }
-  setRawDataAndGroupNames(data: any[], groups: string[]) {
-    this._rawData = data;
-    this.rowData = makeGroups(data, groups);
+  setOptions(rawData: any[], groups: string[], singleSelection: boolean = false, multiSelection: boolean = false) {
+    this._rawData = rawData;
+    this._multiSelection = multiSelection;
+    this._singleSelection = singleSelection;
+    this._singleSelection = singleSelection;
+    this.rowData = makeGroups(rawData, groups, singleSelection || multiSelection, multiSelection);
   }
   setColIdAndDataType(data: any) {
     if (data.children.length > 0 && data.children[0].groupId) {
@@ -92,7 +123,7 @@ export class RowGroup {
   }
   reconcileRowData(data: any[]) {
     this.metadata.forEach((it) => {
-      if (it.level === 0) {
+      if (it._level === 0) {
         const rowIndex = data.indexOf(it);
         this.lookAround(it, rowIndex, false);
         data.splice(rowIndex + 1, it.children.length);
@@ -133,7 +164,7 @@ export class RowGroup {
 
 }
 
-export function makeGroups(rawData: any[], rawGroups: string[]): any[] {
+export function makeGroups(rawData: any[], rawGroups: string[], hasSelection: boolean, multiselect: boolean): any[] {
   function groupData(data: any[], groups: string[]): any[] {
     if (groups.length === 0) return data;
 
@@ -146,12 +177,16 @@ export function makeGroups(rawData: any[], rawGroups: string[]): any[] {
           id: Math.random().toString(),
           [groupBy]: key,
           groupId: groupBy,
-          level: rawGroups.indexOf(groupBy),
+          _level: rawGroups.indexOf(groupBy),
+          _hasSelection: hasSelection,
+          _multiselect: multiselect,
           isExpanded: false,
           children: []
         };
       }
-      acc[key].children.push(item);
+      item._level = rawGroups.length;
+      item._hasSelection = hasSelection,
+        acc[key].children.push(item);
       return acc;
     }, {});
 
